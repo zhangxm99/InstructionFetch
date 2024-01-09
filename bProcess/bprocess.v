@@ -1,6 +1,10 @@
+//当前版本的设计可优化之处：
+//目前是如果前面几个B都不跳了，就算后面找到了非B的跳转，
+//也只是把pc设置成那个非B跳转的位置，在下一次取指的时候进行处理
+//这样方便编码，但整整慢了一轮，后续考虑优化
 `timescale 1ns / 1ps
 
-`define NOTB 3'd1
+`define NORMAL 3'd0
 `define B 3'd1
 
 module bPredictAndLearning(
@@ -47,10 +51,11 @@ module bPredictAndLearning(
     generate
         //算法参考：https://stackoverflow.com/questions/38230450/first-non-zero-element-encoder-in-verilog
         wire[3:0] b_tmp[10:0];
+        assign b_tmp[0] = 0;
         for(i = 0;i < 10;i = i+1) begin
             assign b_tmp[i+1] = w_jumpGatherTable_19[i][0+:3] == `B?i:b_tmp[i];
         end
-        assign counter_3 = b_tmp[10];
+        assign counter_3 = b_tmp[10]+1;
     endgenerate
 
     //同步预测
@@ -81,11 +86,11 @@ module bPredictAndLearning(
     endgenerate
 
     //标记是否预测值中有判定跳转的
-    assign gotJ = firstJPos < counter_3?1:0;
+    assign predictGotJ = firstJPos < counter_3?1:0;
     //存储从头到第一个预测为跳，共有几个B，如果都预测不跳，就是B指令个数
-    assign passBNum_3 = gotJ?(firstJPos+1):counter_3;
+    assign passBNum_3 = predictGotJ?(firstJPos+1):counter_3;
 
-    //错误检查逻辑
+    //错误检查与学习逻辑
     assign gotErr = i_correctPC == 0? 0:1;
     assign o_passBNum_3 = gotErr?-1:passBNum_3;
     assign errPos = i_pendingB_8-i_counter_3;
@@ -107,21 +112,35 @@ module bPredictAndLearning(
             assign tmpEntry[i*33+1+:32] = w_typeAndAddressTable_35[w_jumpGatherTable_19[3-i][11+:8]][3+:32];
             assign tmpEntry[i*33] = 0;
         end
-        assign o_newGHREntry_132 = gotErr?0:((tmpEntry>>(33*(4-o_passBNum_3))) | (gotJ ? 1:0));
+        assign o_newGHREntry_132 = gotErr?0:((tmpEntry>>(33*(4-o_passBNum_3))) | (predictGotJ ? 1:0));
     endgenerate
 
+    //找到B后面第一个非B跳转，如果预测所有B都不跳就从这条指令跳了
+    wire[3:0] findJ_tmp[10:0];
+    wire[3:0] afterBFirstJ;
+    assign findJ_tmp[10] = 0;
+    generate
+        for(i = 9;i >= 0;i = i-1)begin
+            assign findJ_tmp[i] = w_jumpGatherTable_19[i][0+:3] != `B && w_jumpGatherTable_19[i][0+:3] != `NORMAL?i:findJ_tmp[i+1];
+        end
+        assign afterBFirstJ = findJ_tmp[0];
+    endgenerate
 
     assign o_nextPc_32 = gotErr?
     i_correctPC:
-    gotJ ? 
+    predictGotJ ? 
     w_typeAndAddressTable_35[w_jumpGatherTable_19[firstJPos][11+:8]][3+:32]:
-    i_currentPc_32+i_validSize_4;
+    afterBFirstJ == 0?
+    i_currentPc_32+i_validSize_4:
+    w_typeAndAddressTable_35[w_jumpGatherTable_19[afterBFirstJ][11+:8]][3+:32];
     
     assign o_cutPosition_8 = gotErr?
     -1:
-    gotJ ? 
+    predictGotJ ? 
     w_jumpGatherTable_19[firstJPos][11+:8]:
-    i_alignedInstructionNumber_4-1;
+    afterBFirstJ == 0?
+    i_alignedInstructionNumber_4-1:
+    w_jumpGatherTable_19[afterBFirstJ][11+:8];
 
 endmodule
 

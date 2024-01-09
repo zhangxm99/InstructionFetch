@@ -3,6 +3,7 @@ module btables (
     input wire[7:0] i_newPendingB_8,
     input wire[2:0] i_passBNum_3,
     input wire[7:0] i_errWeightPos_8,
+    input wire[8*9-1:0] i_newWeights_72,
     input wire[33*4-1:0] i_newGHREntry_132,
     output wire[7:0] o_pendingB_8,
     output wire[33*20-1:0] o_globalHistoryRegister_660,
@@ -25,14 +26,20 @@ module btables (
     endgenerate
 
     wire[33*20-1:0] rightShift;
-    assign rightShift = (r_globalHistoryRegister_660 >> ((r_pendingB_8-1)*33));
+    assign rightShift = (r_globalHistoryRegister_660 >> ((i_newPendingB_8-1)*33));
     assign correctRightShift = {rightShift[33*20-1:1],~rightShift[0]};
 
     always @(posedge fire) begin
-        r_pendingB_8 = i_newPendingB_8;
-        r_globalHistoryRegister_660 = i_errWeightPos_8[7] == 1?
+        r_pendingB_8 <= i_newPendingB_8;
+
+        r_globalHistoryRegister_660 <= i_passBNum_3 != -1?
         ((r_globalHistoryRegister_660 << (i_passBNum_3*33)) | i_newGHREntry_132) :
         correctRightShift;
+
+        weightTable_9[i_errWeightPos_8] <= i_passBNum_3 == -1?
+        weightTable_9[i_errWeightPos_8]:
+        i_newWeights_72;
+
     end
     
 endmodule
