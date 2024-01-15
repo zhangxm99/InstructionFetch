@@ -23,6 +23,8 @@ module bPredictAndLearning(
     output wire[3:0] o_newPendingB_3,
     output wire[33*4-1:0] o_newGHREntry_132,
     output wire[2:0] o_passBNum_3,
+    output wire[2:0] o_counter_3,
+    output wire[31:0] o_clearPC,
     output wire[31:0] o_nextPc_32,
     output wire[7:0] o_cutPosition_8
     );
@@ -91,6 +93,8 @@ module bPredictAndLearning(
     assign passBNum_3 = predictGotJ?(firstJPos+1):counter_3;
 
     //错误检查与学习逻辑
+    assign o_counter_3 = 0;
+    assign o_clearPC = 0;
     assign gotErr = i_correctPC == 0? 0:1;
     assign o_passBNum_3 = gotErr?-1:passBNum_3;
     assign errPos = i_pendingB_8-i_counter_3;
