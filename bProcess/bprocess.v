@@ -31,7 +31,7 @@ module bPredictAndLearning(
     //跳转汇集表,每个表项由8bits num_offset、8bits accurate_offset和3bits type组成
     wire[18:0] w_jumpGatherTable_19[9:0];
     //类型与地址表，每个表项由32bits address和3bits type组成
-    wire[34:0] w_typeAndAddressTable_35[0:9];
+    wire[34:0] w_typeAndAddressTable_35[9:0];
     //有效指令汇集表
     wire[31:0] w_validInstruction_32[9:0];
     //权重表
@@ -63,7 +63,7 @@ module bPredictAndLearning(
     //同步预测
     generate
         wire[3:0] IndexOfWeightTable[9:0];
-        wire[7:0] mul[8:0];
+        wire[8*8-1:0] mul[8:0];
         wire[10:0] sum[3:0];
         wire res[3:0];
         for (i = 0;i < 4;i = i+1) begin
@@ -71,14 +71,18 @@ module bPredictAndLearning(
             
             genvar j;
             for(j = 0;j < 8;j = j+1) begin
-                assign mul[j] = i_globalHistoryRegister_660[j*33] == 1?r_weightTable_9[IndexOfWeightTable[i]][j*8+:8]:0;
+                if(j < i)
+                    assign mul[i][j*8+:8] = 0;
+                else
+                    assign mul[i][j*8+:8] = i_globalHistoryRegister_660[j*33] == 1?r_weightTable_9[IndexOfWeightTable[i]][j*8+:8]:0;
             end
-            assign sum[i] = mul[0]+mul[1]+mul[2]+mul[3]+mul[4]+mul[5]+mul[6]+mul[7] + r_weightTable_9[IndexOfWeightTable[i]][8*8+:8];
+            assign sum[i] = mul[i][0]+mul[i][1]+mul[i][2]+mul[i][3]+mul[i][4]+mul[i][5]+mul[i][6]+mul[i][7] + r_weightTable_9[IndexOfWeightTable[i]][8*8+:8];
             assign res[i] = sum[i] > 0?1:0;
         end
 
         //找到第一个跳转指令位置
         wire[3:0] j_tmp[4:0];
+        wire[3:0] firstJPos;
         //算法思路：从最后一位向前依次看，如果出现了想要的情况，就写入当前的索引，这样就能保证第0位要不然为最先出现的，要不然就是无效值
         assign j_tmp[4] = 15;
         for(i = 3;i >= 0;i = i-1)begin
@@ -88,19 +92,24 @@ module bPredictAndLearning(
     endgenerate
 
     //标记是否预测值中有判定跳转的
+    wire predictGotJ;
     assign predictGotJ = firstJPos < counter_3?1:0;
     //存储从头到第一个预测为跳，共有几个B，如果都预测不跳，就是B指令个数
+    wire[2:0] passBNum_3;
     assign passBNum_3 = predictGotJ?(firstJPos+1):counter_3;
 
     //错误检查与学习逻辑
     assign o_counter_3 = 0;
     assign o_clearPC = 0;
+    wire gotErr;
     assign gotErr = i_correctPC == 0? 0:1;
     assign o_passBNum_3 = gotErr?-1:passBNum_3;
+    wire[7:0] errPos;
     assign errPos = i_pendingB_8-i_counter_3;
     assign o_newPendingB_3 = gotErr?errPos:errPos+o_passBNum_3;
     
     assign o_errWeightPos_8 = gotErr?i_globalHistoryRegister_660[(errPos-1)*33+1+:32] % 228:-1;
+    wire correctRes;
     assign correctRes = ~i_globalHistoryRegister_660[(errPos-1)*33];
 
     generate
@@ -113,7 +122,7 @@ module bPredictAndLearning(
     wire[33*4-1:0] tmpEntry;
     generate
         for(i = 3;i >= 0;i=i-1)begin
-            assign tmpEntry[i*33+1+:32] = w_typeAndAddressTable_35[w_jumpGatherTable_19[3-i][11+:8]][3+:32];
+            assign tmpEntry[i*33+1+:32] = w_jumpGatherTable_19[3-i][11+:8] + i_currentPc_32;
             assign tmpEntry[i*33] = 0;
         end
         assign o_newGHREntry_132 = gotErr?0:((tmpEntry>>(33*(4-o_passBNum_3))) | (predictGotJ ? 1:0));
