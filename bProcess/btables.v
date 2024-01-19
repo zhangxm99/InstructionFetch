@@ -1,5 +1,6 @@
 module btables (
     input fire,
+    input rst,
     input wire[7:0] i_newPendingB_8,
     input wire[2:0] i_passBNum_3,
     input wire[7:0] i_errWeightPos_8,
@@ -29,7 +30,14 @@ module btables (
     assign rightShift = (r_globalHistoryRegister_660 >> ((i_newPendingB_8-1)*33));
     assign correctRightShift = {rightShift[33*20-1:1],~rightShift[0]};
 
-    always @(posedge fire) begin
+    always @(posedge fire or negedge rst) begin
+        if(!rst)begin
+            r_pendingB_8 <= 0;
+            r_globalHistoryRegister_660 <= 0;
+            for (integer i = 0; i < 228; i = i + 1) begin
+                weightTable_9[i] <= 0;
+            end
+        end
         r_pendingB_8 <= i_newPendingB_8;
 
         r_globalHistoryRegister_660 <= i_passBNum_3 != -1?

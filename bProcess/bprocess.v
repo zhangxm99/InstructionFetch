@@ -8,32 +8,30 @@
 `define B 3'd1
 
 module bPredictAndLearning(
-    input wire[3:0] i_alignedInstructionNumber_4,
-    input wire[4:0] i_validSize_4,
-    input wire[19*10-1:0] i_jumpGatherTableBus_190,
-    input wire[349:0] i_typeAndAddressTableBus_350,
-    input wire[31:0] i_currentPc_32,
-    input wire[33*20-1:0] i_globalHistoryRegister_660,
-    input wire[8*9*228-1:0] i_weightTable_16416,
-    input wire[31:0] i_correctPC,
-    input wire[2:0] i_counter_3,
-    input wire[7:0] i_pendingB_8,
-    output wire[7:0] o_errWeightPos_8,
-    output wire[8*9-1:0] o_newWeights,
-    output wire[3:0] o_newPendingB_3,
-    output wire[33*4-1:0] o_newGHREntry_132,
-    output wire[2:0] o_passBNum_3,
-    output wire[2:0] o_counter_3,
-    output wire[31:0] o_clearPC,
-    output wire[31:0] o_nextPc_32,
-    output wire[7:0] o_cutPosition_8
+    input [3:0] i_alignedInstructionNumber_4,
+    input [4:0] i_validSize_4,
+    input [19*10-1:0] i_jumpGatherTableBus_190,
+    input [349:0] i_typeAndAddressTableBus_350,
+    input [31:0] i_currentPc_32,
+    input [33*20-1:0] i_globalHistoryRegister_660,
+    input [8*9*228-1:0] i_weightTable_16416,
+    input [31:0] i_correctPC,
+    input [2:0] i_counter_3,
+    input [7:0] i_pendingB_8,
+    output [7:0] o_errWeightPos_8,
+    output [8*9-1:0] o_newWeights,
+    output [7:0] o_newPendingB_3,
+    output [33*4-1:0] o_newGHREntry_132,
+    output [2:0] o_newpassBNum_3,
+    output  o_newcounter_3,
+    output [31:0] o_clearPC,
+    output [31:0] o_nextPc_32,
+    output [7:0] o_cutPosition_8
     );
     //跳转汇集表,每个表项由8bits num_offset、8bits accurate_offset和3bits type组成
     wire[18:0] w_jumpGatherTable_19[9:0];
     //类型与地址表，每个表项由32bits address和3bits type组成
     wire[34:0] w_typeAndAddressTable_35[9:0];
-    //有效指令汇集表
-    wire[31:0] w_validInstruction_32[9:0];
     //权重表
     wire[9*8-1:0] r_weightTable_9[227:0];
 
@@ -44,8 +42,9 @@ module bPredictAndLearning(
             assign w_jumpGatherTable_19[i] = i_jumpGatherTableBus_190[i*19 +: 19];
             assign w_typeAndAddressTable_35[i] = i_typeAndAddressTableBus_350[i*35 +: 35];
         end
-        for(i = 0;i < 228;i = i+1)
+        for(i = 0;i < 228;i = i+1)begin
             assign r_weightTable_9[i] = i_weightTable_16416[i*72+:72];
+        end
     endgenerate
 
     //连续B型指令的判定
@@ -62,8 +61,8 @@ module bPredictAndLearning(
 
     //同步预测
     generate
-        wire[3:0] IndexOfWeightTable[9:0];
-        wire[8*8-1:0] mul[8:0];
+        wire[8:0] IndexOfWeightTable[3:0];
+        wire[8*8-1:0] mul[3:0];
         wire[10:0] sum[3:0];
         wire res[3:0];
         for (i = 0;i < 4;i = i+1) begin
@@ -99,14 +98,14 @@ module bPredictAndLearning(
     assign passBNum_3 = predictGotJ?(firstJPos+1):counter_3;
 
     //错误检查与学习逻辑
-    assign o_counter_3 = 0;
+    assign o_newcounter_3 = 0;
     assign o_clearPC = 0;
     wire gotErr;
     assign gotErr = i_correctPC == 0? 0:1;
-    assign o_passBNum_3 = gotErr?-1:passBNum_3;
+    assign o_newpassBNum_3 = gotErr?-1:passBNum_3;
     wire[7:0] errPos;
     assign errPos = i_pendingB_8-i_counter_3;
-    assign o_newPendingB_3 = gotErr?errPos:errPos+o_passBNum_3;
+    assign o_newPendingB_3 = gotErr?errPos:errPos+o_newpassBNum_3;
     
     assign o_errWeightPos_8 = gotErr?i_globalHistoryRegister_660[(errPos-1)*33+1+:32] % 228:-1;
     wire correctRes;
@@ -125,7 +124,7 @@ module bPredictAndLearning(
             assign tmpEntry[i*33+1+:32] = w_jumpGatherTable_19[3-i][11+:8] + i_currentPc_32;
             assign tmpEntry[i*33] = 0;
         end
-        assign o_newGHREntry_132 = gotErr?0:((tmpEntry>>(33*(4-o_passBNum_3))) | (predictGotJ ? 1:0));
+        assign o_newGHREntry_132 = gotErr?0:((tmpEntry>>(33*(4-o_newpassBNum_3))) | predictGotJ);
     endgenerate
 
     //找到B后面第一个非B跳转，如果预测所有B都不跳就从这条指令跳了
