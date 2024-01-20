@@ -10,10 +10,11 @@
 module bPredictAndLearning(
     input [3:0] i_alignedInstructionNumber_4,
     input [4:0] i_validSize_4,
-    input [19*10-1:0] i_jumpGatherTableBus_190,
+    input [8*10-1:0] i_jumpGatherTableBus_80,
+    input [64*10-1:0] i_alignedInstructionTableBus_640,
     input [349:0] i_typeAndAddressTableBus_350,
     input [31:0] i_currentPc_32,
-    input [33*20-1:0] i_globalHistoryRegister_660,
+    input [9*20-1:0] i_globalHistoryRegister_180,
     input [8*9*228-1:0] i_weightTable_16416,
     input [31:0] i_correctPC,
     input [2:0] i_counter_3,
@@ -21,15 +22,17 @@ module bPredictAndLearning(
     output [7:0] o_errWeightPos_8,
     output [8*9-1:0] o_newWeights,
     output [7:0] o_newPendingB_3,
-    output [33*4-1:0] o_newGHREntry_132,
+    output [9*4-1:0] o_newGHREntry_36,
     output [2:0] o_newpassBNum_3,
     output  o_newcounter_3,
     output [31:0] o_clearPC,
     output [31:0] o_nextPc_32,
     output [7:0] o_cutPosition_8
     );
-    //跳转汇集表,每个表项由8bits num_offset、8bits accurate_offset和3bits type组成
-    wire[18:0] w_jumpGatherTable_19[9:0];
+    //跳转汇集表,每个表项由5bits num_offset、3bits type组成
+    wire[7:0] w_jumpGatherTable_8[9:0];
+    //对齐指令表，每个表项有32bits instructions和32bits accurate_addr
+    wire[63:0] w_alignedInstructionTable_64[9:0];
     //类型与地址表，每个表项由32bits address和3bits type组成
     wire[34:0] w_typeAndAddressTable_35[9:0];
     //权重表
@@ -39,7 +42,8 @@ module bPredictAndLearning(
     genvar i;
     generate
         for(i = 0;i < 10;i = i+1)begin
-            assign w_jumpGatherTable_19[i] = i_jumpGatherTableBus_190[i*19 +: 19];
+            assign w_jumpGatherTable_8[i] = i_jumpGatherTableBus_80[i*8 +: 8];
+            assign w_alignedInstructionTable_64[i] = i_alignedInstructionTableBus_640[i*64+:64];
             assign w_typeAndAddressTable_35[i] = i_typeAndAddressTableBus_350[i*35 +: 35];
         end
         for(i = 0;i < 228;i = i+1)begin
@@ -49,15 +53,7 @@ module bPredictAndLearning(
 
     //连续B型指令的判定
     wire[2:0] counter_3;
-    generate
-        //算法参考：https://stackoverflow.com/questions/38230450/first-non-zero-element-encoder-in-verilog
-        wire[3:0] b_tmp[10:0];
-        assign b_tmp[0] = 0;
-        for(i = 0;i < 10;i = i+1) begin
-            assign b_tmp[i+1] = w_jumpGatherTable_19[i][0+:3] == `B?i:b_tmp[i];
-        end
-        assign counter_3 = b_tmp[10]+1;
-    endgenerate
+    assign counter_3 = (w_jumpGatherTable_8[0][0+:3] == `B?(w_jumpGatherTable_8[1][0+:3] == `B?(w_jumpGatherTable_8[2][0+:3] == `B?(w_jumpGatherTable_8[3][0+:3] == `B?4:3):2):1):0);
 
     //同步预测
     generate
@@ -66,14 +62,14 @@ module bPredictAndLearning(
         wire[10:0] sum[3:0];
         wire res[3:0];
         for (i = 0;i < 4;i = i+1) begin
-            assign IndexOfWeightTable[i] = (w_jumpGatherTable_19[i][3+:10] + i_currentPc_32) % 228;
+            assign IndexOfWeightTable[i] = w_alignedInstructionTable_64[w_jumpGatherTable_8[i][3+:5]][32+:32] % 228;
             
             genvar j;
             for(j = 0;j < 8;j = j+1) begin
                 if(j < i)
                     assign mul[i][j*8+:8] = 0;
                 else
-                    assign mul[i][j*8+:8] = i_globalHistoryRegister_660[j*33] == 1?r_weightTable_9[IndexOfWeightTable[i]][j*8+:8]:0;
+                    assign mul[i][j*8+:8] = i_globalHistoryRegister_180[j*9] == 1?r_weightTable_9[IndexOfWeightTable[i]][j*8+:8]:0;
             end
             assign sum[i] = mul[i][0]+mul[i][1]+mul[i][2]+mul[i][3]+mul[i][4]+mul[i][5]+mul[i][6]+mul[i][7] + r_weightTable_9[IndexOfWeightTable[i]][8*8+:8];
             assign res[i] = sum[i] > 0?1:0;
@@ -107,24 +103,24 @@ module bPredictAndLearning(
     assign errPos = i_pendingB_8-i_counter_3;
     assign o_newPendingB_3 = gotErr?errPos:errPos+o_newpassBNum_3;
     
-    assign o_errWeightPos_8 = gotErr?i_globalHistoryRegister_660[(errPos-1)*33+1+:32] % 228:-1;
+    assign o_errWeightPos_8 = gotErr?i_globalHistoryRegister_180[(errPos-1)*9+1+:8]:-1;
     wire correctRes;
-    assign correctRes = ~i_globalHistoryRegister_660[(errPos-1)*33];
+    assign correctRes = ~i_globalHistoryRegister_180[(errPos-1)*9];
 
     generate
         for(i = 0;i < 8;i = i+1)begin
-            assign o_newWeights[i*8+:8] = r_weightTable_9[o_errWeightPos_8][i*8] + (i_globalHistoryRegister_660[(errPos + i)*33] == correctRes?1:-1);
+            assign o_newWeights[i*8+:8] = r_weightTable_9[o_errWeightPos_8][i*8] + (i_globalHistoryRegister_180[(errPos + i)*9] == correctRes?1:-1);
         end
-        assign o_newWeights[8*8+:8] = r_weightTable_9[o_errWeightPos_8][8*8+:8] + (correctRes == 1?1:-1);
+        assign o_newWeights[8*8+:8] = r_weightTable_9[o_errWeightPos_8][8*8+:8] + correctRes;
     endgenerate
 
-    wire[33*4-1:0] tmpEntry;
+    wire[9*4-1:0] tmpEntry;
     generate
         for(i = 3;i >= 0;i=i-1)begin
-            assign tmpEntry[i*33+1+:32] = w_jumpGatherTable_19[3-i][11+:8] + i_currentPc_32;
-            assign tmpEntry[i*33] = 0;
+            assign tmpEntry[i*9+1+:9] = w_alignedInstructionTable_64[w_jumpGatherTable_8[3-i][3+:5]][32+:32] % 228;
+            assign tmpEntry[i*9] = 0;
         end
-        assign o_newGHREntry_132 = gotErr?0:((tmpEntry>>(33*(4-o_newpassBNum_3))) | predictGotJ);
+        assign o_newGHREntry_36 = gotErr?0:((tmpEntry>>(9*(4-o_newpassBNum_3))) | predictGotJ);
     endgenerate
 
     //找到B后面第一个非B跳转，如果预测所有B都不跳就从这条指令跳了
@@ -133,7 +129,7 @@ module bPredictAndLearning(
     assign findJ_tmp[10] = 0;
     generate
         for(i = 9;i >= 0;i = i-1)begin
-            assign findJ_tmp[i] = w_jumpGatherTable_19[i][0+:3] != `B && w_jumpGatherTable_19[i][0+:3] != `NORMAL?i:findJ_tmp[i+1];
+            assign findJ_tmp[i] = w_jumpGatherTable_8[i][0+:3] != `B?i:findJ_tmp[i+1];
         end
         assign afterBFirstJ = findJ_tmp[0];
     endgenerate
@@ -141,18 +137,18 @@ module bPredictAndLearning(
     assign o_nextPc_32 = gotErr?
     i_correctPC:
     predictGotJ ? 
-    w_typeAndAddressTable_35[w_jumpGatherTable_19[firstJPos][11+:8]][3+:32]:
+    w_typeAndAddressTable_35[w_jumpGatherTable_8[firstJPos][3+:5]][3+:32]:
     afterBFirstJ == 0?
     i_currentPc_32+i_validSize_4:
-    w_typeAndAddressTable_35[w_jumpGatherTable_19[afterBFirstJ][11+:8]][3+:32];
+    w_typeAndAddressTable_35[w_jumpGatherTable_8[afterBFirstJ][3+:5]][3+:32];
     
     assign o_cutPosition_8 = gotErr?
     -1:
     predictGotJ ? 
-    w_jumpGatherTable_19[firstJPos][11+:8]:
+    w_jumpGatherTable_8[firstJPos][3+:5]:
     afterBFirstJ == 0?
     i_alignedInstructionNumber_4-1:
-    w_jumpGatherTable_19[afterBFirstJ][11+:8];
+    w_jumpGatherTable_8[afterBFirstJ][3+:5];
 
 endmodule
 

@@ -4,8 +4,10 @@ module bProcessLogic (
     input drive_from_prev,
     input [3:0] i_alignedInstructionNumber_4,
     input [4:0] i_validSize_4,
-    input [19*10-1:0] i_jumpGatherTableBus_190,
+    input [8*10-1:0] i_jumpGatherTableBus_190,
     input [349:0] i_typeAndAddressTableBus_350,
+    input [64*10-1:0] i_alignedInstructionTableBus_640,
+    input [4:0] i_vacancy_from_iQueue,
     input [31:0] i_currentPc_32,
     input rst,
     output [31:0] o_nextPc_32,
@@ -14,7 +16,7 @@ module bProcessLogic (
     output o_free_back
 );
 
-    wire[33*20-1:0] globalHistoryRegister_660Wire;
+    wire[9*20-1:0] globalHistoryRegister_180Wire;
     wire[8*9*228-1:0] weightTableWire;
     wire[31:0] correctPCWire;
     wire[2:0] counter_3Wire;
@@ -22,7 +24,7 @@ module bProcessLogic (
     wire[7:0] errWeightPos_8Wire;
     wire[8*9-1:0] newWeightsWire;
     wire[7:0] newPendingB_8Wire;
-    wire[33*4-1:0] newGHREntry_132Wire;
+    wire[9*4-1:0] newGHREntry_36Wire;
     wire[2:0] newpassBNum_3Wire;
     wire[31:0] clearPCWire;
     wire newcounter_3Wire;
@@ -76,9 +78,9 @@ module bProcessLogic (
                     .i_passBNum_3(newpassBNum_3Wire),
                     .i_errWeightPos_8(errWeightPos_8Wire),
                     .i_newWeights_72(newWeightsWire),
-                    .i_newGHREntry_132(newGHREntry_132Wire),
+                    .i_newGHREntry_36(newGHREntry_36Wire),
                     .o_pendingB_8(pendingB_8Wire),
-                    .o_globalHistoryRegister_660(globalHistoryRegister_660Wire),
+                    .o_globalHistoryRegister_660(globalHistoryRegister_180Wire),
                     .o_weightTable_16416(weightTableWire));
 
     assign fire_or = fire_from_front_lastfifo|fire_from_back_lastfifo;
@@ -90,9 +92,10 @@ module bProcessLogic (
     bPredictAndLearning bPredictAndLearning(.i_alignedInstructionNumber_4(i_alignedInstructionNumber_4),
                         .i_validSize_4(i_validSize_4),
                         .i_jumpGatherTableBus_190(i_jumpGatherTableBus_190),
+                        .i_alignedInstructionTableBus_640(i_alignedInstructionTableBus_640),
                         .i_typeAndAddressTableBus_350(i_typeAndAddressTableBus_350),
                         .i_currentPc_32(i_currentPc_32),
-                        .i_globalHistoryRegister_660(globalHistoryRegister_660Wire),
+                        .i_globalHistoryRegister_180(globalHistoryRegister_180Wire),
                         .i_weightTable_16416(weightTableWire),
                         .i_correctPC(correctPCWire),
                         .i_counter_3(counter_3Wire),
@@ -100,7 +103,7 @@ module bProcessLogic (
                         .o_errWeightPos_8(errWeightPos_8Wire),
                         .o_newWeights(newWeightsWire),
                         .o_newPendingB_3(newPendingB_8Wire),
-                        .o_newGHREntry_132(newGHREntry_132Wire),
+                        .o_newGHREntry_36(newGHREntry_36Wire),
                         .o_newpassBNum_3(newpassBNum_3Wire),
                         .o_newcounter_3(newcounter_3Wire),
                         .o_clearPC(clearPCWire),
