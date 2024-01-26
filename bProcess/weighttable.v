@@ -41,10 +41,8 @@ module weightTable (
                     .o_datas(o_weights_288));
 
 
-    always @(negedge rst or posedge i_fire) begin
-        if(!rst) begin
-            State <= 0;
-        end
+    always @(negedge rst) begin
+        State <= 0;
     end
     
 endmodule

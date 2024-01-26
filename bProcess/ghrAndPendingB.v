@@ -1,11 +1,11 @@
 module ghrAndPendingB (
     input fire,
     input rst,
-    input wire[7:0] i_newPendingB_8,
-    input wire[2:0] i_passBNum_3,
-    input wire[9*4-1:0] i_newGHREntry_36,
-    output wire[7:0] o_pendingB_8,
-    output wire[9*20-1:0] o_globalHistoryRegister_180
+    input[7:0] i_newPendingB_8,
+    input[2:0] i_passBNum_3,
+    input[9*4-1:0] i_newGHREntry_36,
+    output[7:0] o_pendingB_8,
+    output[9*20-1:0] o_globalHistoryRegister_180
 );
 
     //在流水线中等待执行的B指令数量
@@ -16,7 +16,7 @@ module ghrAndPendingB (
     assign o_globalHistoryRegister_180 = r_globalHistoryRegister_180;
     assign o_pendingB_8 = r_pendingB_8;
 
-    wire[9*20-1:0] rightShift;
+    wire[9*20-1:0] rightShift,correctRightShift;
     assign rightShift = (r_globalHistoryRegister_180 >> ((i_newPendingB_8-1)*9));
     assign correctRightShift = {rightShift[9*20-1:1],~rightShift[0]};
 
@@ -26,11 +26,13 @@ module ghrAndPendingB (
             r_pendingB_8 <= 0;
             r_globalHistoryRegister_180 <= 0;
         end
-        r_pendingB_8 <= i_newPendingB_8;
+        else begin
+            r_pendingB_8 <= i_newPendingB_8;
 
-        r_globalHistoryRegister_180 <= i_passBNum_3 != -1?
-        ((r_globalHistoryRegister_180 << (i_passBNum_3*9)) | i_newGHREntry_36) :
-        correctRightShift;
+            r_globalHistoryRegister_180 <= (i_passBNum_3 != 3'b111)?
+            ((r_globalHistoryRegister_180 << (i_passBNum_3*9)) | i_newGHREntry_36) :
+            correctRightShift;
+        end
     end
 
 
