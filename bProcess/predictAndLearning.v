@@ -83,7 +83,7 @@ module bPredictAndLearning (
     wire[9*4-1:0] tmpEntry;
     generate
         for(i = 3;i >= 0;i=i-1)begin
-            assign tmpEntry[i*9+1+:9] = w_alignedInstructionTable_64[w_jumpGatherTable_8[3-i][3+:5]][32+:32] % 228;
+            assign tmpEntry[i*9+1+:8] = w_alignedInstructionTable_64[w_jumpGatherTable_8[3-i][3+:5]][32+:32] % 228;
             assign tmpEntry[i*9] = 0;
         end
         assign o_newGHREntry_36 = o_gotErr?0:((tmpEntry>>(9*(4-o_newpassBNum_3))) | predictGotJ);
