@@ -35,19 +35,24 @@ module fourWayReadSram (
 
     wire[8*9-1:0] data[7:0];
     generate
+        wire[4:0] readSelectAddr[7:0];
         wire[4:0] selectAddr[7:0];
         for(i = 0;i < 8;i = i+1)begin
-            assign selectAddr[i] = mod[0] == i?(i_readAddr[7:0]>>3):(mod[1] == i?(i_readAddr[15:8]>>3):(mod[2] == i?(i_readAddr[23:16]>>3):(mod[3] == i?(i_readAddr[31:24]>>3):0)));
-            
+            assign readSelectAddr[i] = mod[0] == i?(i_readAddr[7:0]>>3):(mod[1] == i?(i_readAddr[15:8]>>3):(mod[2] == i?(i_readAddr[23:16]>>3):(mod[3] == i?(i_readAddr[31:24]>>3):0)));
+            assign selectAddr[i] = write_en?writeSelectAddr:readSelectAddr[i];
             //228/8 per block
+            // SRAM SRAM(.fire(i_fire),
+            //           .csen(cs[i]),
+            //           .readen(readen[i]),
+            //           .writeen(writeen[i]),
+            //           .rst(rst),
+            //           .i_readAddr(readSelectAddr[i]),
+            //           .i_writeAddr(writeSelectAddr),
+            //           .i_writeData(i_writeData),
+            //           .o_data(data[i]));
             SRAM SRAM(.fire(i_fire),
-                      .csen(cs[i]),
-                      .readen(readen[i]),
                       .writeen(writeen[i]),
-                      .rst(rst),
-                      .i_readAddr(selectAddr[i]),
-                      .i_writeAddr(writeSelectAddr),
-                      .i_writeData(i_writeData),
+                      .addr(selectAddr[i]),
                       .o_data(data[i]));
         end
     endgenerate
