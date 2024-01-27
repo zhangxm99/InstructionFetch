@@ -14,7 +14,7 @@ module fourWayReadSram (
     generate
         wire [2:0] mod[3:0];
         for(i = 0;i < 4;i = i+1)begin
-            assign mod[i] = (i_readAddr[i*8+:8] % 16) >> 1;
+            assign mod[i] = i_readAddr[i*8+:8] % 8;
         end
 
         wire[7:0] cs;
@@ -23,13 +23,13 @@ module fourWayReadSram (
         wire[7:0] writeen;
         wire[4:0] writeSelectAddr;
         assign writeSelectAddr = i_writeAddr>>3;
-        assign write_offset = (i_writeAddr%16)>>1;
+        assign write_offset = i_writeAddr%8;
 
         for(i = 0;i < 8;i = i+1)begin
             assign cs[i] = mod[0] == i || mod[1] == i || mod[2] == i || mod[3] == i;
             //默认只能要么读要么写，所以如果写的电平拉高就把所有读电平拉低
             assign readen[i] = read_en?cs[i]:0;
-            assign writeen[i] = write_en && write_offset == i?1:0;
+            assign writeen[i] = (write_en && write_offset == i)?1:0;
         end
     endgenerate
 
@@ -43,7 +43,7 @@ module fourWayReadSram (
             SRAM SRAM(.fire(i_fire),
                       .csen(cs[i]),
                       .readen(readen[i]),
-                      .writeen(write_en[i]),
+                      .writeen(writeen[i]),
                       .rst(rst),
                       .i_readAddr(selectAddr[i]),
                       .i_writeAddr(writeSelectAddr),

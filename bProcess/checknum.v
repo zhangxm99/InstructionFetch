@@ -18,7 +18,8 @@ module checkNum (
             assign w_jumpGatherTable_8[i] = i_jumpGatherTableBus_80[i*8 +: 8];
         end
         for(i = 0;i < 4;i = i+1)begin
-            assign o_weightsAddr_32[i*8 +: 8] = w_alignedInstructionTable_64[w_jumpGatherTable_8[i][3+:5]][32+:32] % 228;
+            //这里取33是因为pc是偶数，所以最后一位没有意义
+            assign o_weightsAddr_32[i*8 +: 8] = w_alignedInstructionTable_64[w_jumpGatherTable_8[i][3+:5]][33+:31] % 228;
         end
     endgenerate
 

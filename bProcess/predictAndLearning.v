@@ -3,6 +3,8 @@
 //也只是把pc设置成那个非B跳转的位置，在下一次取指的时候进行处理
 //这样方便编码，但整整慢了一轮，后续考虑优化
 `define B 3'd1
+`define NORMAL 3'd0
+
 module bPredictAndLearning (
     input [3:0] i_alignedInstructionNumber_4,
     input [4:0] i_validSize_4,
@@ -51,7 +53,7 @@ module bPredictAndLearning (
                 else
                     assign mul[i][j*8+:8] = i_globalHistoryRegister_180[j*9] == 1?i_weights_288[i*72+j*8+:8]:0;
             end
-            assign sum[i] = mul[i][0]+mul[i][1]+mul[i][2]+mul[i][3]+mul[i][4]+mul[i][5]+mul[i][6]+mul[i][7] +  i_weights_288[i*72+64+:8];
+            assign sum[i] = mul[i][0 +: 8]+mul[i][8+:8]+mul[i][16+:8]+mul[i][24+:8]+mul[i][32 +:8]+mul[i][40+:8]+mul[i][48+:8]+mul[i][56+:8] +  i_weights_288[i*72+64+:8];
             assign res[i] = sum[i] > 0?1:0;
         end
     endgenerate
@@ -95,7 +97,7 @@ module bPredictAndLearning (
     assign findJ_tmp[10] = 0;
     generate
         for(i = 9;i >= 0;i = i-1)begin
-            assign findJ_tmp[i] = w_jumpGatherTable_8[i][0+:3] != `B?i:findJ_tmp[i+1];
+            assign findJ_tmp[i] = w_jumpGatherTable_8[i][0+:3] != `B&&w_jumpGatherTable_8[i][0+:3] != `NORMAL?i:findJ_tmp[i+1];
         end
         assign afterBFirstJ = findJ_tmp[0];
     endgenerate
