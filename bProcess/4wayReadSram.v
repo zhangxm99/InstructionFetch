@@ -34,12 +34,14 @@ module fourWayReadSram (
     endgenerate
 
     wire[8*9-1:0] data[7:0];
+    wire[7:0] en;
     generate
         wire[4:0] readSelectAddr[7:0];
         wire[4:0] selectAddr[7:0];
         for(i = 0;i < 8;i = i+1)begin
             assign readSelectAddr[i] = mod[0] == i?(i_readAddr[7:0]>>3):(mod[1] == i?(i_readAddr[15:8]>>3):(mod[2] == i?(i_readAddr[23:16]>>3):(mod[3] == i?(i_readAddr[31:24]>>3):0)));
             assign selectAddr[i] = write_en?writeSelectAddr:readSelectAddr[i];
+            assign en[i] = writeen[i] | cs[i];
             //228/8 per block
             // SRAM SRAM(.fire(i_fire),
             //           .csen(cs[i]),
@@ -50,10 +52,12 @@ module fourWayReadSram (
             //           .i_writeAddr(writeSelectAddr),
             //           .i_writeData(i_writeData),
             //           .o_data(data[i]));
-            SRAM SRAM(.fire(i_fire),
-                      .writeen(writeen[i]),
-                      .addr(selectAddr[i]),
-                      .o_data(data[i]));
+            sram SRAM(.clka(i_fire),
+                      .ena(en[i]),
+                      .wea(writeen[i]),
+                      .addra(selectAddr[i]),
+                      .dina(i_writeData),
+                      .douta(data[i]));
         end
     endgenerate
     assign o_datas = {data[mod[3]],data[mod[2]],data[mod[1]],data[mod[0]]};

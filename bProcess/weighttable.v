@@ -2,7 +2,8 @@ module weightTable (
     input i_fire,
     input rst,
     input [8*4-1:0] i_weightsAddr_32,
-    input [9*20-1:0] i_globalHistoryRegister_180,
+    input [19-1:0] i_globalHistoryRegister_20,
+    input [7:0] i_errPos,
     input i_gotErr,
     output [8*9*4-1:0] o_weights_288
 );
@@ -12,21 +13,19 @@ module weightTable (
     reg[1:0] State;
 
     wire[8*4-1:0] read_addr;
-    assign correctRes = i_globalHistoryRegister_180[0] == 1?1:-1;
-    wire[7:0] errAddr;
-    assign errAddr = i_globalHistoryRegister_180[1+:8];
+    assign correctRes = i_globalHistoryRegister_20[0] == 1?1:-1;
     assign read_en = State == 0 || State == 1? 1:0;
-    assign read_addr = State == 0?i_weightsAddr_32:{errAddr,errAddr,errAddr,errAddr};//这里地址相同会使得Sram中只有一个被选中，可以省电
+    assign read_addr = State == 0?i_weightsAddr_32:{i_errPos,i_errPos,i_errPos,i_errPos};//这里地址相同会使得Sram中只有一个被选中，可以省电
     assign write_en = State == 2&&i_gotErr?1:0;
     wire[7:0] write_addr;
-    assign write_addr = errAddr;
+    assign write_addr = i_errPos;
 
     wire[8*9-1:0] newWeights;
 
     genvar i;
     generate
         for(i = 0;i < 8;i = i+1)begin
-            assign newWeights[i*8+:8] = o_weights_288[i*8] + ((i_globalHistoryRegister_180[(i+1)*9] == correctRes)?1:-1);
+            assign newWeights[i*8+:8] = o_weights_288[i*8] + ((i_globalHistoryRegister_20[i+1] == correctRes)?1:-1);
         end
         assign newWeights[8*8+:8] = o_weights_288[8*8+:8] + correctRes;
     endgenerate
