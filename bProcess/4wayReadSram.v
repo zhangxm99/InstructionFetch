@@ -54,6 +54,7 @@ module fourWayReadSram (
             //           .o_data(data[i]));
             sram SRAM(.clka(i_fire),
                       .ena(en[i]),
+                      .rst(rst),
                       .wea(writeen[i]),
                       .addra(selectAddr[i]),
                       .dina(i_writeData),

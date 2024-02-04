@@ -26,7 +26,7 @@ module bProcessLogic (
     wire predictGotJWire;
 
     wire drive_from_arb_to_cond;
-    wire[32:0] data_from_arb;
+    wire[41:0] data_from_arb;
     wire free_from_cond_to_arb;
 
     // cArbMerge2_33b cArbMerge2_33b(.i_drive0(drive_from_front),
@@ -40,24 +40,25 @@ module bProcessLogic (
     //                               .o_free1(o_free_back),
     //                               .o_data_33(data_from_arb));
     //这里由于cArbMerge有问题，所以先用MutexMerge替代测试
-    cMutexMerge2_33b cMutexMerge2_33b(.i_drive0(drive_from_front),
+    cMutexMerge2_42b cMutexMerge2_42b(.i_drive0(drive_from_front),
                                 .i_drive1(drive_from_back),
-                                .i_data0_33(33'b0),
-                                .i_data1_33(data_from_back),
+                                .i_data0_42(42'b0),
+                                .i_data1_42(data_from_back),
                                 .i_freeNext(free_from_cond_to_arb),
                                 .rst(rst),
                                 .o_driveNext(drive_from_arb_to_cond),
                                 .o_free0(o_free_front),
                                 .o_free1(o_free_back),
-                                .o_data_33(data_from_arb));
+                                .o_data_42(data_from_arb));
 
     wire fire_from_lastfifo;
     wire drive_cfifo;
     wire drive_clastfifo;
     wire free_from_cfifo_to_cond;
     wire free_from_lastfifo_to_cond;
-    assign valid0 = data_from_arb == (33'b0)?1:0;
-    assign valid1 = data_from_arb == (33'b0)?0:1;
+    wire valid0,valid1;
+    assign valid0 = data_from_arb[41] == 0?1:0;
+    assign valid1 = data_from_arb[41] == 0?0:1;
     cCondFork2 cCondFork2(.i_drive(drive_from_arb_to_cond),
                           .i_freeNext0(free_from_cfifo_to_cond),
                           .i_freeNext1(free_from_lastfifo_to_cond),
@@ -92,6 +93,7 @@ module bProcessLogic (
     wire fire_ghr_pendingB;
     wire fire_read_errWeight;
     wire fire_write_errWeight;
+    wire or_fire;
     assign or_fire = fire_read_errWeight | fire_write_errWeight | fire_SRAM1;
     weightTable weightTable(.i_fire(or_fire),
                             .rst(rst),
@@ -134,13 +136,14 @@ module bProcessLogic (
                                   .i_passBNum_3(passBNum_3Wire),
                                   .i_predictGotJ(predictGotJWire),
                                   .o_pendingB_8(pendingB_8Wire),
-                                  .o_globalHistoryRegister_180(globalHistoryRegister_20Wire));
+                                  .o_globalHistoryRegister_20(globalHistoryRegister_20Wire));
 
     wire fire_from_clastfifo;
+    wire fire_from_cfifo2nd_or_clastfifo;
     assign fire_from_cfifo2nd_or_clastfifo = fire_from_clastfifo | fire_ghr_pendingB;
     bcorrect bcorrect(.fire(fire_from_cfifo2nd_or_clastfifo),
                       .rst(rst),
-                      .i_data(data_from_back),
+                      .i_data(data_from_arb),
                       .o_errPos(errPosWire8),
                       .o_counter(counter_3Wire),
                       .o_correctpc(correctPCWire));

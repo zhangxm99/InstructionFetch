@@ -2,7 +2,7 @@ module weightTable (
     input i_fire,
     input rst,
     input [8*4-1:0] i_weightsAddr_32,
-    input [19-1:0] i_globalHistoryRegister_20,
+    input [19:0] i_globalHistoryRegister_20,
     input [7:0] i_errPos,
     input i_gotErr,
     output [8*9*4-1:0] o_weights_288

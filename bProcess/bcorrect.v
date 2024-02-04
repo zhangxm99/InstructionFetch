@@ -19,9 +19,11 @@ module bcorrect (
             correctpc <= 0;
             errPos <= 0;
         end
-        counter <= i_data[40] == 1?counter+1:0;
-        correctpc <= i_data[39:8];
-        errPos <= i_data[7:0];
+        else begin
+            counter <= i_data[40] == 1?counter+1:0;
+            correctpc <= i_data[39:8];
+            errPos <= i_data[7:0];
+        end
     end
     
 endmodule
