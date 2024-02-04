@@ -30,7 +30,7 @@ module iQueue(
 
     genvar i;
     wire[64*`TABLESIZE-1:0] final;
-    assign final = (i_alignedInstructionTable << (9-i_cutPostion_8)*64) >> (9-i_cutPostion_8)*64;
+    assign final = (i_alignedInstructionTable << (`TABLESIZE-1-i_cutPostion_8)*64) >> (`TABLESIZE-1-i_cutPostion_8)*64;
 
     wire[32*2*`BUFFERSIZE-1:0] newbuffer;
     //先移位清掉之前的，再加上本轮取得的
