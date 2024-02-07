@@ -103,6 +103,6 @@ module bPredictAndLearning (
     w_jumpGatherTable_8[firstJPos][3+:5]:
     afterBFirstJ == 0?
     i_alignedInstructionNumber_4-1:
-    w_jumpGatherTable_8[afterBFirstJ][3+:5]-1;
+    w_jumpGatherTable_8[afterBFirstJ][3+:5];
     
 endmodule

@@ -17,7 +17,7 @@ module sram (
                 store[i] <= 0;
             end
         end
-        if(ena && wea) begin
+        else if(ena && wea) begin
             store[addra] <= dina;
         end
     end

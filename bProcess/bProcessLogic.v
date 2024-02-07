@@ -54,13 +54,13 @@ module bProcessLogic (
     wire fire_from_lastfifo;
     wire drive_cfifo;
     wire drive_clastfifo;
-    wire free_from_cfifo_to_cond;
     wire free_from_lastfifo_to_cond;
+    wire free_from_cfifo1st_to_cond;
     wire valid0,valid1;
     assign valid0 = data_from_arb[41] == 0?1:0;
     assign valid1 = data_from_arb[41] == 0?0:1;
     cCondFork2 cCondFork2(.i_drive(drive_from_arb_to_cond),
-                          .i_freeNext0(free_from_cfifo_to_cond),
+                          .i_freeNext0(free_from_cfifo1st_to_cond),
                           .i_freeNext1(free_from_lastfifo_to_cond),
                           .valid0(valid0),
                           .valid1(valid1),
@@ -73,7 +73,6 @@ module bProcessLogic (
     wire fire_SRAM1;
     wire free_from_cfifo2nd_to_cfifo1st;
     wire drive_from_cfifo1st_to_cfifo2nd;
-    wire free_from_cfifo1st_to_cond;
     cFifo1 cFifo_first(.i_drive(drive_cfifo),
                        .i_freeNext(free_from_cfifo2nd_to_cfifo1st),
                        .o_free(free_from_cfifo1st_to_cond),
