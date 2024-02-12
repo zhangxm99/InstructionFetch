@@ -1,67 +1,108 @@
-`define JALR 3'd3
-`define CALL 3'd4
-`define RET 3'd5
-
-module nbjProcess (
+module nbjTop (
+    input drive_from_front,
+    input drive_from_back,
+    input data_from_back,
+    input free_from_mutex,
     input rst,
-    input i_fire,
     input [7:0] i_firstJTableEntry_8,
     input [3:0] i_alignedInstructionNumber_4,
     input [4:0] i_validSize_5,
     input [31:0] i_currentPc_32,
     input [35*10-1:0] i_typeAndAddressTableBus_350,
     input [64*10-1:0] i_alignedInstructionTableBus_640,
-    input [31:0] i_correctPc_32,
-    input [2:0] i_correctPcIndex_3,
-    input i_type,
     output [31:0] o_nextPc_32,
-    output [7:0] o_cutPosition_8
+    output [7:0] o_cutPosition_8,
+    output o_drive_next,
+    output o_free_front,
+    output o_free_back,
 );
-    wire [2:0] type;
-    wire [31:0] jaddr;
-    wire gotError;
 
-    assign type = i_firstJTableEntry_8[0+:3]; //类型
-    assign jaddr = i_typeAndAddressTableBus_350[i_firstJTableEntry_8[3+:5]*35+3+: 32]; //跳转PC
-    assign gotError = i_correctPc_32 == 32'b0 ? 0 : 1; //后端是否报告错误
-    
-    assign o_cutPosition_8 = i_firstJTableEntry_8[3+:5];
-    
-    //JALR型指令处理
-    reg [31:0] JALRBTB [7:0];
-    wire [2:0] BTBIndex;
-    
-    assign BTBIndex = (i_alignedInstructionTableBus_640[i_firstJTableEntry_8[3+:5]*64+32+:32]) % 8; 
+    wire drive_from_arb_to_cond;
+    wire[36:0] data_from_arb;
+    wire free_from_cond_to_arb;
 
-    reg [31:0] RAS [7:0];
-    reg [2:0] pointer;
+    // cArbMerge2_33b cArbMerge2_33b(.i_drive0(drive_from_front),
+    //                               .i_drive1(drive_from_back),
+    //                               .i_data0_33(33'b0),
+    //                               .i_data1_33(data_from_back),
+    //                               .i_freeNext(free_from_cond_to_arb),
+    //                               .rst(rst),
+    //                               .o_driveNext(drive_from_arb_to_cond),
+    //                               .o_free0(o_free_front),
+    //                               .o_free1(o_free_back),
+    //                               .o_data_33(data_from_arb));
+    //这里由于cArbMerge有问题，所以先用MutexMerge替代测试
+    cMutexMerge2_37b cMutexMerge2_37b(.i_drive0(drive_from_front),
+                                .i_drive1(drive_from_back),
+                                .i_data0_37(37'b0),
+                                .i_data1_37(data_from_back),
+                                .i_freeNext(free_from_cond_to_arb),
+                                .rst(rst),
+                                .o_driveNext(drive_from_arb_to_cond),
+                                .o_free0(o_free_front),
+                                .o_free1(o_free_back),
+                                .o_data_37(data_from_arb));
 
-    always @(posedge i_fire or negedge rst) begin
-        if(!rst) begin
-            pointer <= 3'b0;
-            RAS[0] <= 32'0; JALRBTB[0] <= 32'b0;
-            RAS[1] <= 32'0; JALRBTB[1] <= 32'b0;
-            RAS[2] <= 32'0; JALRBTB[2] <= 32'b0;
-            RAS[3] <= 32'0; JALRBTB[3] <= 32'b0;
-            RAS[4] <= 32'0; JALRBTB[4] <= 32'b0;
-            RAS[5] <= 32'0; JALRBTB[5] <= 32'b0;
-            RAS[6] <= 32'0; JALRBTB[6] <= 32'b0;
-            RAS[7] <= 32'0; JALRBTB[7] <= 32'b0;
-        end 
-        else begin
-        //更新
-        JALRBTB[i_correctPcIndex_3] <= (gotError == 0 || i_type == 1) ? JALRBTB[i_correctPcIndex_3] : i_correctPc_32;
-        pointer <= type == `RET ? (pointer-1) :type == `CALL?(pointer-1):pointer;
-        RAS[pointer+1] <= type == `CALL ? 
-                          i_firstJTableEntry_8[3+:5] + 1 == i_alignedInstructionNumber_4?
-                          i_currentPc_32 + i_validSize_4 :
-                          i_alignedInstructionTableBus_640[i_firstJTableEntry_8[3+:5]*64+64+32+:32] : 
-                          RAS[pointer+1];
-        end
-    end
+    wire fire_from_lastfifo;
+    wire drive_cfifo;
+    wire drive_clastfifo;
+    wire free_from_lastfifo_to_cond;
+    wire free_from_cfifo_to_cond;
+    wire valid0,valid1;
+    assign valid0 = data_from_arb[36] == 0?1:0;
+    assign valid1 = data_from_arb[36] == 0?0:1;
+    cCondFork2 cCondFork2(.i_drive(drive_from_arb_to_cond),
+                          .i_freeNext0(free_from_cfifo_to_cond),
+                          .i_freeNext1(free_from_lastfifo_to_cond),
+                          .valid0(valid0),
+                          .valid1(valid1),
+                          .rst(rst),
+                          .o_free(free_from_cond_to_arb),
+                          .o_driveNext0(drive_cfifo),
+                          .o_driveNext1(drive_clastfifo));
+
+
+    wire fire_from_cfifo;
+    cFifo1 cFifo(.i_drive(drive_cfifo),
+                       .i_freeNext(free_from_mutex),
+                       .o_free(free_from_cfifo_to_cond),
+                       .o_driveNext(o_drive_next),
+                       .rst(rst),
+                       .o_fire_1(fire_from_cfifo));
+
+    wire[31:0] correctPc32Wire;
+    wire[2:0] correctPcIndex3Wire;
+    wire typeWire;
+    nbjProcess nbjProcess (
+        .rst(rst),
+        .i_fire(fire_from_cfifo),
+        .i_firstJTableEntry_8(i_firstJTableEntry_8),
+        .i_alignedInstructionNumber_4(i_alignedInstructionNumber_4),
+        .i_validSize_5(i_validSize_5),
+        .i_currentPc_32(i_currentPc_32),
+        .i_typeAndAddressTableBus_350(i_typeAndAddressTableBus_350),
+        .i_alignedInstructionTableBus_640(i_alignedInstructionTableBus_640),
+        .i_correctPc_32(correctPc32Wire),
+        .i_correctPcIndex_3(correctPcIndex3Wire),
+        .i_type(typeWire),
+        .o_nextPc_32(o_nextPc_32),
+        .o_cutPosition_8(o_cutPosition_8)
+    );
+
+    wire or_fire;
+    wire fire_from_clastfifo;
+    cLastFifo1 cLastFifo1(.i_drive(drive_clastfifo),
+                        .rst(rst),
+                        .o_free(free_from_lastfifo_to_cond),
+                        .o_fire_1(fire_from_clastfifo));
+    assign or_fire = fire_from_cfifo | fire_from_clastfifo;
+    nbjCorrect nbjCorrect(
+        .i_fire(or_fire),
+        .rst(rst),
+        .i_data_37(data_from_arb),
+        .o_type(typeWire),
+        .o_correctPcIndex_3(correctPcIndex3Wire),
+        .o_correctPc_32(correctPc32Wire)
+    )
     
-    assign o_nextPc_32 = gotError ? i_correctPc_32 :
-    type == `RET ? RAS[pointer] :
-    type == `JALR ? JALRBTB[BTBIndex] : jaddr;
-
 endmodule
