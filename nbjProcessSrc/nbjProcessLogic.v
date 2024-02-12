@@ -39,14 +39,14 @@ module nbjProcessLogic (
     always @(posedge i_fire or negedge rst) begin
         if(!rst) begin
             pointer <= 3'b0;
-            RAS[0] <= 32'0; JALRBTB[0] <= 32'b0;
-            RAS[1] <= 32'0; JALRBTB[1] <= 32'b0;
-            RAS[2] <= 32'0; JALRBTB[2] <= 32'b0;
-            RAS[3] <= 32'0; JALRBTB[3] <= 32'b0;
-            RAS[4] <= 32'0; JALRBTB[4] <= 32'b0;
-            RAS[5] <= 32'0; JALRBTB[5] <= 32'b0;
-            RAS[6] <= 32'0; JALRBTB[6] <= 32'b0;
-            RAS[7] <= 32'0; JALRBTB[7] <= 32'b0;
+            RAS[0] <= 32'b0; JALRBTB[0] <= 32'b0;
+            RAS[1] <= 32'b0; JALRBTB[1] <= 32'b0;
+            RAS[2] <= 32'b0; JALRBTB[2] <= 32'b0;
+            RAS[3] <= 32'b0; JALRBTB[3] <= 32'b0;
+            RAS[4] <= 32'b0; JALRBTB[4] <= 32'b0;
+            RAS[5] <= 32'b0; JALRBTB[5] <= 32'b0;
+            RAS[6] <= 32'b0; JALRBTB[6] <= 32'b0;
+            RAS[7] <= 32'b0; JALRBTB[7] <= 32'b0;
         end 
         else begin
         //更新
@@ -54,7 +54,7 @@ module nbjProcessLogic (
         pointer <= type == `RET ? (pointer-1) :type == `CALL?(pointer-1):pointer;
         RAS[pointer+1] <= type == `CALL ? 
                           i_firstJTableEntry_8[3+:5] + 1 == i_alignedInstructionNumber_4?
-                          i_currentPc_32 + i_validSize_4 :
+                          i_currentPc_32 + i_validSize_5 :
                           i_alignedInstructionTableBus_640[i_firstJTableEntry_8[3+:5]*64+64+32+:32] : 
                           RAS[pointer+1];
         end

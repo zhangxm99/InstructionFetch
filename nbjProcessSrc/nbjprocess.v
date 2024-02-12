@@ -1,4 +1,4 @@
-module nbjTop (
+module nbjProcess (
     input drive_from_front,
     input drive_from_back,
     input data_from_back,
@@ -73,7 +73,7 @@ module nbjTop (
     wire[31:0] correctPc32Wire;
     wire[2:0] correctPcIndex3Wire;
     wire typeWire;
-    nbjProcess nbjProcess (
+    nbjProcessLogic nbjProcessLogic (
         .rst(rst),
         .i_fire(fire_from_cfifo),
         .i_firstJTableEntry_8(i_firstJTableEntry_8),
