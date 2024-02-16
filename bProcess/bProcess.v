@@ -1,4 +1,4 @@
-module bProcessLogic (
+module bProcess (
     input rst,
     input drive_from_back,
     input [41:0] data_from_back,
@@ -12,6 +12,7 @@ module bProcessLogic (
     input [31:0] i_currentPc_32,
     output [31:0] o_nextPc_32,
     output [7:0] o_cutPosition_8,
+    output [2:0] o_firstJPos_3,
     output o_free_front,
     output o_free_back,
     output drive_next
@@ -119,6 +120,7 @@ module bProcessLogic (
                                             .o_passBNum_3(passBNum_3Wire),
                                             .o_gotErr(gotErrWire),
                                             .o_nextPc_32(o_nextPc_32),
+                                            .o_firstJPos_3(o_firstJPos_3),
                                             .o_cutPosition_8(o_cutPosition_8));
 
     cFifo3 cfifo_second(.i_drive(drive_from_cfifo1st_to_cfifo2nd),
@@ -151,10 +153,6 @@ module bProcessLogic (
                           .rst(rst),
                           .o_free(free_from_lastfifo_to_cond),
                           .o_fire_1(fire_from_clastfifo));
-
-
-
-
 
 
 endmodule

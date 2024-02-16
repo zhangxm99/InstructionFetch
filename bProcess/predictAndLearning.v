@@ -7,7 +7,7 @@
 
 module bPredictAndLearning (
     input [3:0] i_alignedInstructionNumber_4,
-    input [4:0] i_validSize_4,
+    input [4:0] i_validSize_5,
     input [31:0] i_currentPc_32,
     input [8*10-1:0] i_jumpGatherTableBus_80,
     input [349:0] i_typeAndAddressTableBus_350,
@@ -23,6 +23,7 @@ module bPredictAndLearning (
     output [2:0] o_passBNum_3,
     output o_gotErr,
     output [31:0] o_nextPc_32,
+    output [2:0] o_firstJPos_3,
     output [7:0] o_cutPosition_8
 );
 
@@ -58,22 +59,21 @@ module bPredictAndLearning (
         end
         //找到第一个跳转指令位置
         wire[3:0] j_tmp[4:0];
-        wire[3:0] firstJPos;
         //算法思路：从最后一位向前依次看，如果出现了想要的情况，就写入当前的索引，这样就能保证第0位要不然为最先出现的，要不然就是无效值
         assign j_tmp[4] = 15;
         for(i = 3;i >= 0;i = i-1)begin
             assign j_tmp[i] = res[i] == 1?i:j_tmp[i+1];
         end
-        assign firstJPos = j_tmp[0];
+        assign o_firstJPos_3 = j_tmp[0];
     endgenerate
 
     //标记是否预测值中有判定跳转的
-    assign o_predictGotJ = firstJPos < i_consecutiveBNum_4?1:0;
+    assign o_predictGotJ = o_firstJPos_3 < i_consecutiveBNum_4?1:0;
 
     //错误检查与学习逻辑
     assign o_gotErr = i_correctPC == 0? 0:1;
     //存储从头到第一个预测为跳，共有几个B，如果都预测不跳，就是B指令个数
-    assign o_passBNum_3 = o_gotErr?-1:(o_predictGotJ?(firstJPos+1):i_consecutiveBNum_4);
+    assign o_passBNum_3 = o_gotErr?-1:(o_predictGotJ?(o_firstJPos_3+1):i_consecutiveBNum_4);
     wire[7:0] errPos;
     assign errPos = i_pendingB_8-i_counter_3;
     assign o_newPendingB_8 = o_gotErr?errPos:errPos+o_passBNum_3;
@@ -92,15 +92,15 @@ module bPredictAndLearning (
     assign o_nextPc_32 = o_gotErr?
     i_correctPC:
     o_predictGotJ ? 
-    w_typeAndAddressTable_35[w_jumpGatherTable_8[firstJPos][3+:5]][3+:32]:
+    w_typeAndAddressTable_35[w_jumpGatherTable_8[o_firstJPos_3][3+:5]][3+:32]:
     afterBFirstJ == 0?
-    i_currentPc_32+i_validSize_4:
+    i_currentPc_32+i_validSize_5:
     w_alignedInstructionTable_64[w_jumpGatherTable_8[afterBFirstJ][3+:5]][32+:32];
     
     assign o_cutPosition_8 = o_gotErr?
     -1:
     o_predictGotJ ? 
-    w_jumpGatherTable_8[firstJPos][3+:5]:
+    w_jumpGatherTable_8[o_firstJPos_3][3+:5]:
     afterBFirstJ == 0?
     i_alignedInstructionNumber_4-1:
     w_jumpGatherTable_8[afterBFirstJ][3+:5];
