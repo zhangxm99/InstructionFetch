@@ -12,6 +12,7 @@ module nbjProcess (
     input [64*10-1:0] i_alignedInstructionTableBus_640,
     output [31:0] o_nextPc_32,
     output [7:0] o_cutPosition_8,
+    output [1:0] o_type,
     output o_drive_next,
     output o_free_front,
     output o_free_back,
@@ -72,7 +73,7 @@ module nbjProcess (
 
     wire[31:0] correctPc32Wire;
     wire[2:0] correctPcIndex3Wire;
-    wire typeWire;
+    wire errTypeWire;
     nbjProcessLogic nbjProcessLogic (
         .rst(rst),
         .i_fire(fire_from_cfifo),
@@ -84,9 +85,10 @@ module nbjProcess (
         .i_alignedInstructionTableBus_640(i_alignedInstructionTableBus_640),
         .i_correctPc_32(correctPc32Wire),
         .i_correctPcIndex_3(correctPcIndex3Wire),
-        .i_type(typeWire),
+        .i_errType(errTypeWire),
         .o_nextPc_32(o_nextPc_32),
-        .o_cutPosition_8(o_cutPosition_8)
+        .o_cutPosition_8(o_cutPosition_8),
+        .o_type(o_type)
     );
 
     wire or_fire;
@@ -100,7 +102,7 @@ module nbjProcess (
         .i_fire(or_fire),
         .rst(rst),
         .i_data_37(data_from_arb),
-        .o_type(typeWire),
+        .o_errType(errTypeWire),
         .o_correctPcIndex_3(correctPcIndex3Wire),
         .o_correctPc_32(correctPc32Wire)
     )
