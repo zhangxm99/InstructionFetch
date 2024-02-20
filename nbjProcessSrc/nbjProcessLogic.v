@@ -16,9 +16,8 @@ module nbjProcessLogic (
     input i_errType,
     output [31:0] o_nextPc_32,
     output [7:0] o_cutPosition_8,
-    output [1:0] o_type
+    output [2:0] o_type
 );
-    wire [2:0] o_type;
     wire [31:0] jaddr;
     wire gotError;
 
@@ -50,14 +49,14 @@ module nbjProcessLogic (
             RAS[7] <= 32'b0; JALRBTB[7] <= 32'b0;
         end 
         else begin
-        //更新
-        JALRBTB[i_correctPcIndex_3] <= (gotError == 0 || i_type == 1) ? JALRBTB[i_correctPcIndex_3] : i_correctPc_32;
-        pointer <= o_type == `RET ? (pointer-1) :o_type == `CALL?(pointer-1):pointer;
-        RAS[pointer+1] <= o_type == `CALL ? 
-                          i_firstJTableEntry_8[3+:5] + 1 == i_alignedInstructionNumber_4?
-                          i_currentPc_32 + i_validSize_5 :
-                          i_alignedInstructionTableBus_640[i_firstJTableEntry_8[3+:5]*64+64+32+:32] : 
-                          RAS[pointer+1];
+            //更新
+            JALRBTB[i_correctPcIndex_3] <= (gotError == 0 || i_errType == 1) ? JALRBTB[i_correctPcIndex_3] : i_correctPc_32;
+            pointer <= o_type == `RET ? (pointer-1) :o_type == `CALL?(pointer+1):pointer;
+            RAS[pointer+1] <= o_type == `CALL ? 
+                            i_firstJTableEntry_8[3+:5] + 1 == i_alignedInstructionNumber_4?
+                            i_currentPc_32 + i_validSize_5 :
+                            i_alignedInstructionTableBus_640[i_firstJTableEntry_8[3+:5]*64+64+32+:32] : 
+                            RAS[pointer+1];
         end
     end
     

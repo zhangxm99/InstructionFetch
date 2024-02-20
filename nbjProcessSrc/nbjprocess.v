@@ -12,7 +12,7 @@ module nbjProcess (
     input [64*10-1:0] i_alignedInstructionTableBus_640,
     output [31:0] o_nextPc_32,
     output [7:0] o_cutPosition_8,
-    output [1:0] o_type,
+    output [2:0] o_type,
     output o_drive_next,
     output o_free_front,
     output o_free_back,
