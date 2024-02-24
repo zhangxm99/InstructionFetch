@@ -4,6 +4,7 @@
 //这样方便编码，但整整慢了一轮，后续考虑优化
 `define B 3'd1
 `define NORMAL 3'd0
+`define NUM_OF_BPREDICTOR 4
 
 module bPredictAndLearning (
     input [3:0] i_alignedInstructionNumber_4,
@@ -43,10 +44,10 @@ module bPredictAndLearning (
     endgenerate
 
     generate
-        wire[8*8-1:0] mul[3:0];
-        wire[10:0] sum[3:0];
-        wire res[3:0];
-        for (i = 0;i < 4;i = i+1) begin
+        wire[8*8-1:0] mul[`NUM_OF_BPREDICTOR-1:0];
+        wire[10:0] sum[`NUM_OF_BPREDICTOR-1:0];
+        wire res[`NUM_OF_BPREDICTOR-1:0];
+        for (i = 0;i < `NUM_OF_BPREDICTOR;i = i+1) begin
             genvar j;
             for(j = 0;j < 8;j = j+1) begin
                 if(j < i)
@@ -58,10 +59,10 @@ module bPredictAndLearning (
             assign res[i] = sum[i] > 0?1:0;
         end
         //找到第一个跳转指令位置
-        wire[3:0] j_tmp[4:0];
+        wire[3:0] j_tmp[`NUM_OF_BPREDICTOR:0];
         //算法思路：从最后一位向前依次看，如果出现了想要的情况，就写入当前的索引，这样就能保证第0位要不然为最先出现的，要不然就是无效值
         assign j_tmp[4] = 15;
-        for(i = 3;i >= 0;i = i-1)begin
+        for(i = `NUM_OF_BPREDICTOR-1;i >= 0;i = i-1)begin
             assign j_tmp[i] = res[i] == 1?i:j_tmp[i+1];
         end
         assign o_firstJPos_3 = j_tmp[0];
