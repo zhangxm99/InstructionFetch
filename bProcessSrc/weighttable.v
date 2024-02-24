@@ -23,9 +23,12 @@ module weightTable (
     wire[8*9-1:0] newWeights;
 
     genvar i;
+    wire[7:0] changes;
     generate
         for(i = 0;i < 8;i = i+1)begin
-            assign newWeights[i*8+:8] = o_weights_288[i*8] + ((i_globalHistoryRegister_20[i+1] == correctRes)?1:-1);
+            assign changes[i] = i_globalHistoryRegister_20[i+1] == correctRes?1:0;
+            //限制反卷
+            assign newWeights[i*8+:8] = (o_weights_288[i*8] == -8'd128 && changes[i] == 0) || (o_weights_288[i*8] == 8'd127 && changes[i] == 1)?o_weights_288[i*8] : o_weights_288[i*8]+(changes[i] == 1?1:-1'd1);
         end
         assign newWeights[8*8+:8] = o_weights_288[8*8+:8] + correctRes;
     endgenerate
