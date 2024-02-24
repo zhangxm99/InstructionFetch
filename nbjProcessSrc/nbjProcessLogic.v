@@ -52,11 +52,11 @@ module nbjProcessLogic (
             //更新
             JALRBTB[i_correctPcIndex_3] <= (gotError == 0 || i_errType == 1) ? JALRBTB[i_correctPcIndex_3] : i_correctPc_32;
             pointer <= o_type == `RET ? (pointer-1) :o_type == `CALL?(pointer+1):pointer;
-            RAS[pointer+1] <= o_type == `CALL ? 
+            RAS[pointer] <= o_type == `CALL ? 
                             i_firstJTableEntry_8[3+:5] + 1 == i_alignedInstructionNumber_4?
                             i_currentPc_32 + i_validSize_5 :
                             i_alignedInstructionTableBus_640[i_firstJTableEntry_8[3+:5]*64+64+32+:32] : 
-                            RAS[pointer+1];
+                            RAS[pointer];
         end
     end
     
