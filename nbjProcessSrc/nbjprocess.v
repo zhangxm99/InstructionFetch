@@ -15,7 +15,7 @@ module nbjProcess (
     output [2:0] o_type,
     output o_drive_next,
     output o_free_front,
-    output o_free_back,
+    output o_free_back
 );
 
     wire drive_from_arb_to_cond;
@@ -105,6 +105,6 @@ module nbjProcess (
         .o_errType(errTypeWire),
         .o_correctPcIndex_3(correctPcIndex3Wire),
         .o_correctPc_32(correctPc32Wire)
-    )
+    );
     
 endmodule
